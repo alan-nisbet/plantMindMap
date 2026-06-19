@@ -1,0 +1,25 @@
+{
+  "name": "Plant Knowledge Map",
+  "short_name": "Plant Map",
+  "description": "Indoor and outdoor plant knowledge map — care, selection, garden planning, and soil health.",
+  "start_url": "./plant-mind-map.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2C1F14",
+  "theme_color": "#2C1F14",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

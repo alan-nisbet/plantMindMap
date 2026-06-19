@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Plant Map" />
+<meta name="theme-color" content="#2C1F14" />
+<meta name="description" content="Indoor and outdoor plant knowledge map — care, selection, garden planning, and soil health." />
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json" />
+
+<!-- iOS Home Screen icons -->
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="icon-192.png" />
+
+<!-- iOS splash screens (portrait, common iPhone sizes) -->
+<link rel="apple-touch-startup-image" href="splash.png" />
+
+<title>Plant Knowledge Map</title>
+
+<!-- Fonts — preconnect so they load fast online; system stack used offline -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" /></noscript>
+<style>
+  /* Fonts loaded via <link> in head for preload; system stack used offline */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --soil:    #2C1F14;
+    --bark:    #5A3D2B;
+    --sage:    #7A9E7E;
+    --fern:    #4A7C59;
+    --moss:    #C8D8C0;
+    --petal:   #E8A598;
+    --cream:   #F5F0E8;
+    --stone:   #9E9488;
+    --sun:     #D4A843;
+    --sky:     #7EAFC6;
+    --bg:      #F0EBE0;
+
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-body:    'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --font-mono:    'DM Mono', 'SF Mono', 'Courier New', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-body);
+    color: var(--soil);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--soil);
+    padding: 2rem 3rem 1.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    color: var(--cream);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .subtitle {
+    font-size: 0.8rem;
+    color: var(--stone);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Legend strip ── */
+  .legend {
+    background: var(--bark);
+    padding: 0.6rem 3rem;
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--moss);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Layout ── */
+  .map-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 2.5rem 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── Category Panels ── */
+  .category {
+    border: 1px solid rgba(90,61,43,0.15);
+    border-radius: 3px;
+    margin: 0.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  }
+  .category:hover { box-shadow: 0 4px 20px rgba(44,31,20,0.10); }
+
+  .cat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .cat-header:hover { filter: brightness(0.95); }
+
+  .cat-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .cat-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    flex: 1;
+  }
+  .cat-count {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    opacity: 0.6;
+  }
+  .cat-chevron {
+    font-size: 0.75rem;
+    opacity: 0.5;
+    transition: transform 0.25s ease;
+  }
+  .category.open .cat-chevron { transform: rotate(90deg); }
+
+  /* ── Sub-nodes ── */
+  .cat-body {
+    display: none;
+    background: #fff;
+    border-top: 1px solid rgba(90,61,43,0.10);
+  }
+  .category.open .cat-body { display: block; }
+
+  .topic {
+    border-bottom: 1px solid rgba(90,61,43,0.06);
+  }
+  .topic:last-child { border-bottom: none; }
+
+  .topic-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 1.25rem 0.65rem 1.5rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--bark);
+    transition: background 0.12s;
+  }
+  .topic-header:hover { background: var(--cream); }
+
+  .topic-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .topic-chevron {
+    margin-left: auto;
+    font-size: 0.65rem;
+    opacity: 0.4;
+    transition: transform 0.2s;
+  }
+  .topic.open .topic-chevron { transform: rotate(90deg); }
+
+  .topic-body {
+    display: none;
+    padding: 0.5rem 1.5rem 0.75rem 2.5rem;
+    background: #fafafa;
+    border-top: 1px dashed rgba(90,61,43,0.08);
+  }
+  .topic.open .topic-body { display: block; }
+
+  /* ── Leaf items ── */
+  .leaf-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.4rem 0;
+  }
+  .leaf {
+    background: var(--cream);
+    border: 1px solid rgba(90,61,43,0.12);
+    border-radius: 2px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--soil);
+    font-family: var(--font-mono);
+    transition: background 0.12s, border-color 0.12s;
+    cursor: default;
+  }
+  .leaf:hover {
+    background: var(--moss);
+    border-color: var(--sage);
+  }
+
+  /* ── Tip cards ── */
+  .tip-card {
+    background: var(--cream);
+    border-left: 3px solid var(--sage);
+    border-radius: 0 2px 2px 0;
+    padding: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.77rem;
+    line-height: 1.55;
+    color: var(--bark);
+  }
+  .tip-card strong {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--sage);
+    margin-bottom: 0.2rem;
+  }
+
+  /* ── Center node ── */
+  .center-node {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .center-badge {
+    background: var(--fern);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-style: italic;
+    padding: 0.9rem 2.5rem;
+    border-radius: 2px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 12px rgba(74,124,89,0.3);
+  }
+
+  /* ── Expand-all button ── */
+  .controls {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 3rem 0.5rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    background: transparent;
+    border: 1px solid var(--bark);
+    border-radius: 2px;
+    padding: 0.35rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--bark);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .ctrl-btn:hover { background: var(--bark); color: var(--cream); }
+
+  /* ── Colour assignments per category ── */
+  .cat-indoor  .cat-header { background: #EAF3EC; }
+  .cat-outdoor .cat-header { background: #E8F0F5; }
+  .cat-care    .cat-header { background: #F5EDE8; }
+  .cat-select  .cat-header { background: #F0EDE2; }
+  .cat-plan    .cat-header { background: #EDF0E8; }
+  .cat-soil    .cat-header { background: #EDE8E0; }
+
+  /* dot colours */
+  .dot-indoor  { background: var(--fern); }
+  .dot-outdoor { background: var(--sky); }
+  .dot-care    { background: var(--petal); }
+  .dot-select  { background: var(--sun); }
+  .dot-plan    { background: var(--sage); }
+  .dot-soil    { background: var(--bark); }
+
+  /* ── Garden Planning Components ── */
+  .plan-intro {
+    font-size: 0.83rem;
+    line-height: 1.65;
+    color: var(--bark);
+    background: var(--cream);
+    border-left: 3px solid var(--sage);
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 1rem;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .plan-section-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--stone);
+    margin: 0.9rem 0 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid rgba(90,61,43,0.1);
+  }
+
+  /* Layer stack */
+  .layer-stack { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+  .layer-block { padding: 0.65rem 0.85rem; border-radius: 2px; border: 1px solid rgba(90,61,43,0.1); }
+  .layer-top  { background: #F0F5E8; border-left: 4px solid #4A7C59; }
+  .layer-mid  { background: #F5F0E8; border-left: 4px solid #C8A060; }
+  .layer-low  { background: #EAF0F5; border-left: 4px solid #7EAFC6; }
+  .layer-tag  {
+    font-family: var(--font-mono);
+    font-size: 0.69rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--bark);
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+  }
+  .layer-desc { font-size: 0.78rem; line-height: 1.5; color: var(--soil); margin-bottom: 0.45rem; }
+
+  /* Rules grid */
+  .rules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+  }
+  .rule-block {
+    background: #fff;
+    border: 1px solid rgba(90,61,43,0.12);
+    border-radius: 2px;
+    padding: 0.65rem 0.75rem;
+  }
+  .rule-title {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fern);
+    margin-bottom: 0.3rem;
+  }
+  .rule-desc { font-size: 0.76rem; line-height: 1.5; color: var(--soil); }
+
+  /* Season timeline */
+  .season-timeline { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+  .season-block {
+    border-radius: 2px;
+    border: 1px solid rgba(90,61,43,0.1);
+    padding: 0.65rem 0.85rem;
+  }
+  .sblock-spring  { background: #EAF5F0; border-left: 4px solid #60B090; }
+  .sblock-lspring { background: #F0F5E8; border-left: 4px solid #80B040; }
+  .sblock-summer  { background: #FFF8E8; border-left: 4px solid var(--sun); }
+  .sblock-fall    { background: #FFF0E8; border-left: 4px solid #D07030; }
+  .sblock-winter  { background: #EAF0F5; border-left: 4px solid #7090B0; }
+  .season-header {
+    font-family: var(--font-display);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--soil);
+    margin-bottom: 0.25rem;
+  }
+  .season-desc { font-size: 0.77rem; line-height: 1.5; color: var(--bark); margin-bottom: 0.4rem; }
+  .season-note {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--bark);
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.5rem;
+    background: rgba(255,255,255,0.6);
+    border-radius: 2px;
+  }
+
+  /* Companion mechanisms */
+  .companion-mech {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .mech-block {
+    background: #fff;
+    border: 1px solid rgba(90,61,43,0.12);
+    border-radius: 2px;
+    padding: 0.65rem 0.7rem;
+    text-align: center;
+  }
+  .mech-icon { font-size: 1.4rem; margin-bottom: 0.3rem; }
+  .mech-title {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fern);
+    margin-bottom: 0.3rem;
+  }
+  .mech-desc { font-size: 0.74rem; line-height: 1.5; color: var(--soil); text-align: left; }
+
+  /* Companion table */
+  .companion-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.76rem;
+    margin-bottom: 0.75rem;
+  }
+  .companion-table th {
+    background: var(--fern);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+    font-weight: 400;
+  }
+  .companion-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid rgba(90,61,43,0.07);
+    color: var(--soil);
+    line-height: 1.45;
+    vertical-align: top;
+  }
+  .companion-table tr:nth-child(even) td { background: rgba(200,216,192,0.15); }
+  .companion-table tr:hover td { background: var(--cream); }
+
+  /* Avoid grid */
+  .avoid-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .avoid-block {
+    background: #FFF5F0;
+    border: 1px solid rgba(200,80,50,0.15);
+    border-left: 3px solid #C86040;
+    border-radius: 0 2px 2px 0;
+    padding: 0.6rem 0.7rem;
+  }
+  .avoid-pair {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: #C86040;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .avoid-desc { font-size: 0.75rem; line-height: 1.5; color: var(--soil); }
+
+  /* Tools grid */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+    margin-bottom: 0.75rem;
+  }
+  .tool-block {
+    background: #fff;
+    border: 1px solid rgba(90,61,43,0.12);
+    border-radius: 2px;
+    padding: 0.65rem 0.75rem;
+  }
+  .tool-name {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--soil);
+    margin-bottom: 0.3rem;
+  }
+  .tool-desc { font-size: 0.76rem; line-height: 1.5; color: var(--bark); margin-bottom: 0.35rem; }
+  .tool-action {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--fern);
+    background: #EAF5F0;
+    padding: 0.25rem 0.4rem;
+    border-radius: 2px;
+    line-height: 1.4;
+  }
+
+  /* Schedule table */
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .schedule-table th {
+    background: var(--soil);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+    font-weight: 400;
+  }
+  .schedule-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid rgba(90,61,43,0.07);
+    color: var(--soil);
+    line-height: 1.45;
+    vertical-align: top;
+  }
+  .schedule-table tr:nth-child(even) td { background: rgba(200,216,192,0.15); }
+  .schedule-table tr:hover td { background: var(--cream); }
+  .schedule-table td:last-child { color: var(--bark); font-style: italic; font-size: 0.72rem; }
+
+  /* Responsive planning components — handled in unified mobile block below */
+  @media (max-width: 900px) {
+    .companion-mech { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Exposure grids ── */
+  .exposure-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .exp-block {
+    border-radius: 3px;
+    padding: 0.75rem;
+    border: 1px solid rgba(90,61,43,0.12);
+  }
+  .exp-south  { background: #FFF8E8; border-left: 3px solid var(--sun); }
+  .exp-west   { background: #FFF2E0; border-left: 3px solid #E08030; }
+  .exp-east   { background: #EAF5F0; border-left: 3px solid var(--sky); }
+  .exp-west-part { background: #F5F0E8; border-left: 3px solid #C8A060; }
+  .exp-north  { background: #EAF0F5; border-left: 3px solid #7090B0; }
+  .exp-canopy { background: #EAF0EA; border-left: 3px solid var(--fern); }
+
+  .exp-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--bark);
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+  }
+  .exp-desc {
+    font-size: 0.77rem;
+    line-height: 1.5;
+    color: var(--soil);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── Canopy blocks ── */
+  .canopy-types {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+  }
+  .canopy-block {
+    background: var(--cream);
+    border: 1px solid rgba(90,61,43,0.12);
+    border-radius: 3px;
+    padding: 0.7rem;
+  }
+  .canopy-label {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fern);
+    margin-bottom: 0.3rem;
+  }
+  .canopy-detail {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--bark);
+    margin-bottom: 0.4rem;
+  }
+
+  /* ── Orientation table ── */
+  .orient-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.76rem;
+    margin-bottom: 0.75rem;
+  }
+  .orient-table th {
+    background: var(--soil);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    font-weight: 400;
+  }
+  .orient-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgba(90,61,43,0.08);
+    color: var(--soil);
+    line-height: 1.4;
+    vertical-align: top;
+  }
+  .orient-table tr:nth-child(even) td { background: rgba(200,216,192,0.2); }
+  .orient-table tr:hover td { background: var(--cream); }
+
+
+  /* ═══════════════════════════════════════════════
+     UNIFIED MOBILE — iPhone / DuckDuckGo Browser
+     Target: 390px viewport (iPhone 14/15 Pro)
+     All two-column grids collapse to single column.
+     Touch targets minimum 44×44px (Apple HIG).
+     Font sizes scaled for 390px legibility.
+     Tap highlight suppressed; momentum scrolling on.
+  ═══════════════════════════════════════════════ */
+
+  /* ── iOS base resets ── */
+  html {
+    -webkit-text-size-adjust: 100%; /* prevent iOS font inflation */
+    text-size-adjust: 100%;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent; /* remove grey tap flash */
+    -webkit-overflow-scrolling: touch;         /* momentum scrolling */
+  }
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* ── Tap-to-explore prompt ── */
+  .tap-prompt {
+    display: none; /* hidden on desktop */
+  }
+
+  /* ── Scrollable table wrapper (mobile) ── */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+  }
+  .table-scroll table {
+    margin-bottom: 0;
+    min-width: 480px; /* prevents squishing; user scrolls horizontally */
+  }
+
+  /* ════════════════════════════
+     @media ≤ 480px  — iPhone
+  ════════════════════════════ */
+  @media (max-width: 480px) {
+
+    /* Header */
+    header {
+      padding: 1.1rem 1rem 0.9rem;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    header h1 { font-size: 1.35rem; }
+    header .subtitle { font-size: 0.68rem; }
+
+    /* Legend — wrap tightly, smaller text */
+    .legend {
+      padding: 0.5rem 1rem;
+      gap: 0.6rem 1rem;
+    }
+    .legend-item { font-size: 0.65rem; }
+    .legend-dot  { width: 8px; height: 8px; }
+
+    /* Controls — full-width tap buttons */
+    .controls {
+      padding: 0.5rem 1rem 0.25rem;
+      gap: 0.5rem;
+    }
+    .ctrl-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.6rem 0.5rem;   /* 44px touch target height */
+      font-size: 0.68rem;
+    }
+
+    /* Tap-to-explore prompt — shown only on mobile */
+    .tap-prompt {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0 1rem 0.25rem;
+      padding: 0.55rem 0.75rem;
+      background: var(--fern);
+      border-radius: 3px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      animation: promptPulse 2.5s ease-in-out 0.8s 2;
+    }
+    .tap-prompt-icon { font-size: 1rem; flex-shrink: 0; }
+
+    @keyframes promptPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.6; }
+    }
+
+    /* Map container — single column, tighter padding */
+    .map-container {
+      grid-template-columns: 1fr;
+      padding: 0.75rem 1rem;
+      gap: 0;
+    }
+
+    /* Centre badge — full width, smaller */
+    .center-node { margin-bottom: 0.5rem; }
+    .center-badge {
+      font-size: 0.95rem;
+      padding: 0.65rem 1.25rem;
+      text-align: center;
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Category panels — full width, generous touch target */
+    .category { margin: 0.35rem 0; border-radius: 4px; }
+
+    .cat-header {
+      padding: 0.85rem 1rem;    /* ~52px height — above Apple's 44px min */
+      gap: 0.6rem;
+    }
+    .cat-icon  { font-size: 1.15rem; }
+    .cat-title { font-size: 0.98rem; }
+    .cat-count { font-size: 0.65rem; }
+    .cat-chevron { font-size: 0.8rem; opacity: 0.6; }
+
+    /* Topic rows — minimum 44px touch target */
+    .topic-header {
+      padding: 0.75rem 1rem 0.75rem 1.15rem;
+      font-size: 0.84rem;
+      min-height: 44px;
+      align-items: center;
+    }
+    .topic-dot   { width: 8px; height: 8px; }
+    .topic-chevron { font-size: 0.75rem; opacity: 0.5; }
+
+    /* Topic body — less deep indent on narrow screen */
+    .topic-body {
+      padding: 0.5rem 1rem 0.75rem 1.15rem;
+    }
+
+    /* Leaf tags — slightly larger for fat-finger tapping */
+    .leaf {
+      font-size: 0.72rem;
+      padding: 0.3rem 0.65rem;
+    }
+
+    /* Tip cards */
+    .tip-card {
+      font-size: 0.78rem;
+      line-height: 1.6;
+      padding: 0.55rem 0.8rem;
+    }
+    .tip-card strong { font-size: 0.67rem; }
+
+    /* ── Planning section: all 2-col → 1-col ── */
+    .plan-intro   { font-size: 0.81rem; }
+    .rules-grid,
+    .avoid-grid,
+    .tools-grid,
+    .companion-mech,
+    .exposure-grid,
+    .canopy-types { grid-template-columns: 1fr; }
+
+    .layer-desc, .rule-desc, .season-desc,
+    .mech-desc,  .canopy-detail, .exp-desc,
+    .tool-desc,  .avoid-desc {
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    /* Mech blocks — left-align on single column */
+    .mech-block { text-align: left; }
+    .mech-icon  { font-size: 1.2rem; }
+
+    /* Season timeline notes */
+    .season-note { font-size: 0.7rem; }
+    .season-header { font-size: 0.85rem; }
+
+    /* Tool action tags */
+    .tool-action { font-size: 0.7rem; }
+
+    /* ── All tables — horizontal scroll wrapper ── */
+    /* Tables don't reflow well at 390px; let user scroll */
+    .orient-table,
+    .companion-table,
+    .schedule-table {
+      font-size: 0.72rem;
+    }
+    .orient-table th,  .orient-table td,
+    .companion-table th, .companion-table td,
+    .schedule-table th,  .schedule-table td {
+      padding: 0.4rem 0.45rem;
+    }
+
+    /* Wrap all tables in scrollable containers via JS (see script) */
+
+    /* Footer */
+    .map-footer {
+      font-size: 0.65rem;
+      padding: 1rem 1rem 2rem; /* extra bottom for iOS home indicator */
+      letter-spacing: 0.04em;
+    }
+  }
+
+  /* ── Slightly larger iPhones / landscape ── */
+  @media (min-width: 481px) and (max-width: 720px) {
+    .map-container {
+      grid-template-columns: 1fr;
+      padding: 1rem 1.25rem;
+    }
+    header, .legend, .controls { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .rules-grid, .avoid-grid, .tools-grid { grid-template-columns: 1fr 1fr; }
+    .companion-mech { grid-template-columns: 1fr 1fr 1fr; }
+    .exposure-grid, .canopy-types { grid-template-columns: 1fr; }
+    .orient-table, .companion-table, .schedule-table { font-size: 0.72rem; }
+    .cat-header { padding: 0.8rem 1.25rem; }
+    .topic-header { min-height: 44px; }
+    .ctrl-btn { padding: 0.55rem 0.9rem; }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Plant Knowledge Map</h1>
+  <span class="subtitle">Indoor &amp; Outdoor · Care · Selection · Planning</span>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot dot-indoor"></span> Indoor</div>
+  <div class="legend-item"><span class="legend-dot dot-outdoor"></span> Outdoor</div>
+  <div class="legend-item"><span class="legend-dot dot-care"></span> Care</div>
+  <div class="legend-item"><span class="legend-dot dot-select"></span> Selection</div>
+  <div class="legend-item"><span class="legend-dot dot-plan"></span> Planning</div>
+  <div class="legend-item"><span class="legend-dot dot-soil"></span> Soil &amp; Roots</div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="expandAll()">Expand All</button>
+  <button class="ctrl-btn" onclick="collapseAll()">Collapse All</button>
+</div>
+
+<!-- Shown only on mobile — pulses twice then fades -->
+<div class="tap-prompt" id="tapPrompt">
+  <span class="tap-prompt-icon">👆</span>
+  Tap any section to explore
+</div>
+
+<div class="map-container">
+
+  <!-- Centre badge -->
+  <div class="center-node">
+    <div class="center-badge">Plants — A Living Reference</div>
+  </div>
+
+  <!-- ── INDOOR PLANTS ── -->
+  <div class="category cat-indoor" id="cat-indoor">
+    <div class="cat-header" onclick="toggleCat('cat-indoor')">
+      <span class="cat-icon">🪴</span>
+      <span class="cat-title">Indoor Plants</span>
+      <span class="cat-count">6 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <div class="topic" id="t-foliage">
+        <div class="topic-header" onclick="toggleTopic('t-foliage')">
+          <span class="topic-dot dot-indoor"></span>Foliage Houseplants
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Pothos</li><li class="leaf">Monstera deliciosa</li>
+            <li class="leaf">Snake Plant</li><li class="leaf">ZZ Plant</li>
+            <li class="leaf">Peace Lily</li><li class="leaf">Chinese Evergreen</li>
+            <li class="leaf">Rubber Tree</li><li class="leaf">Bird of Paradise</li>
+          </ul>
+          <div class="tip-card"><strong>Why they work indoors</strong>Most foliage houseplants originate from tropical forest understories — adapted to filtered light, steady warmth, and high humidity. Your home mimics that environment reasonably well.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-flowering-in">
+        <div class="topic-header" onclick="toggleTopic('t-flowering-in')">
+          <span class="topic-dot dot-indoor"></span>Flowering Houseplants
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">African Violet</li><li class="leaf">Anthurium</li>
+            <li class="leaf">Orchid (Phalaenopsis)</li><li class="leaf">Bromeliad</li>
+            <li class="leaf">Begonia</li><li class="leaf">Spathiphyllum</li>
+            <li class="leaf">Kalanchoe</li><li class="leaf">Gardenia</li>
+          </ul>
+          <div class="tip-card"><strong>Light triggers flowering</strong>Most indoor bloomers need bright indirect light to rebloom. Think of light as the "ignition switch" — without enough of it, the plant stays vegetative.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-succulents">
+        <div class="topic-header" onclick="toggleTopic('t-succulents')">
+          <span class="topic-dot dot-indoor"></span>Succulents &amp; Cacti
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Aloe Vera</li><li class="leaf">Echeveria</li>
+            <li class="leaf">Haworthia</li><li class="leaf">Jade Plant</li>
+            <li class="leaf">Barrel Cactus</li><li class="leaf">Christmas Cactus</li>
+            <li class="leaf">Sedum</li><li class="leaf">Gasteria</li>
+          </ul>
+          <div class="tip-card"><strong>Store water, not attention</strong>Succulents thrive on neglect. They store water in their tissues the same way a camel stores it in fat reserves — built for drought, not abundance.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-air-purify">
+        <div class="topic-header" onclick="toggleTopic('t-air-purify')">
+          <span class="topic-dot dot-indoor"></span>Air-Purifying Plants
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Spider Plant</li><li class="leaf">Boston Fern</li>
+            <li class="leaf">Dracaena</li><li class="leaf">Bamboo Palm</li>
+            <li class="leaf">English Ivy</li><li class="leaf">Areca Palm</li>
+          </ul>
+          <div class="tip-card"><strong>NASA Clean Air Study</strong>These species were identified as effective VOC reducers. Great for bedrooms, offices, and newly renovated spaces off-gassing paint or flooring.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-low-light">
+        <div class="topic-header" onclick="toggleTopic('t-low-light')">
+          <span class="topic-dot dot-indoor"></span>Low-Light Tolerant
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Cast Iron Plant</li><li class="leaf">Pothos (Golden)</li>
+            <li class="leaf">ZZ Plant</li><li class="leaf">Peace Lily</li>
+            <li class="leaf">Chinese Evergreen</li><li class="leaf">Parlour Palm</li>
+          </ul>
+          <div class="tip-card"><strong>Dim rooms, not dark rooms</strong>"Low light" still means some daylight — think north-facing window. True darkness won't sustain any plant. These just need less than most.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-toxic">
+        <div class="topic-header" onclick="toggleTopic('t-toxic')">
+          <span class="topic-dot dot-indoor"></span>Pet &amp; Child Safety
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Toxic: Pothos</li><li class="leaf">Toxic: Peace Lily</li>
+            <li class="leaf">Toxic: Monstera</li><li class="leaf">Toxic: Dracaena</li>
+            <li class="leaf">Safe: Spider Plant</li><li class="leaf">Safe: Boston Fern</li>
+            <li class="leaf">Safe: Areca Palm</li><li class="leaf">Safe: Haworthia</li>
+          </ul>
+          <div class="tip-card"><strong>Always verify with ASPCA</strong>Toxicity levels vary — some cause mild irritation, others are seriously dangerous. Always cross-check with the ASPCA Toxic Plant Database before placing plants in a home with pets or young children.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── OUTDOOR PLANTS ── -->
+  <div class="category cat-outdoor" id="cat-outdoor">
+    <div class="cat-header" onclick="toggleCat('cat-outdoor')">
+      <span class="cat-icon">🌳</span>
+      <span class="cat-title">Outdoor Plants</span>
+      <span class="cat-count">6 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <div class="topic" id="t-perennials">
+        <div class="topic-header" onclick="toggleTopic('t-perennials')">
+          <span class="topic-dot dot-outdoor"></span>Perennials
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Black-Eyed Susan</li><li class="leaf">Coneflower</li>
+            <li class="leaf">Hostas</li><li class="leaf">Day Lily</li>
+            <li class="leaf">Russian Sage</li><li class="leaf">Astilbe</li>
+            <li class="leaf">Bleeding Heart</li><li class="leaf">Salvia</li>
+          </ul>
+          <div class="tip-card"><strong>Plant once, enjoy for years</strong>Perennials are like a long-term infrastructure investment — higher upfront cost than annuals, but they compound value season after season without replanting.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-annuals">
+        <div class="topic-header" onclick="toggleTopic('t-annuals')">
+          <span class="topic-dot dot-outdoor"></span>Annuals
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Marigolds</li><li class="leaf">Petunias</li>
+            <li class="leaf">Impatiens</li><li class="leaf">Zinnias</li>
+            <li class="leaf">Lobelia</li><li class="leaf">Snapdragons</li>
+            <li class="leaf">Cosmos</li><li class="leaf">Nasturtiums</li>
+          </ul>
+          <div class="tip-card"><strong>Full-season colour strategy</strong>Annuals are the "quick wins" of garden design — they bloom hard all season, letting you refresh colour palette each year without commitment.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-shrubs">
+        <div class="topic-header" onclick="toggleTopic('t-shrubs')">
+          <span class="topic-dot dot-outdoor"></span>Shrubs &amp; Hedges
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Boxwood</li><li class="leaf">Lilac</li>
+            <li class="leaf">Forsythia</li><li class="leaf">Hydrangea</li>
+            <li class="leaf">Rose of Sharon</li><li class="leaf">Spirea</li>
+            <li class="leaf">Viburnum</li><li class="leaf">Holly</li>
+          </ul>
+          <div class="tip-card"><strong>Structure before softness</strong>Shrubs are the "bones" of garden architecture. Design with shrubs first, then layer perennials and annuals around them — the same way an architect places walls before furniture.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-vegetables">
+        <div class="topic-header" onclick="toggleTopic('t-vegetables')">
+          <span class="topic-dot dot-outdoor"></span>Vegetables &amp; Herbs
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Tomatoes</li><li class="leaf">Zucchini</li>
+            <li class="leaf">Kale</li><li class="leaf">Beans</li>
+            <li class="leaf">Lettuce</li><li class="leaf">Basil</li>
+            <li class="leaf">Cilantro</li><li class="leaf">Chives</li>
+            <li class="leaf">Mint</li><li class="leaf">Carrots</li>
+          </ul>
+          <div class="tip-card"><strong>Ontario hardiness note</strong>In Eastern Ontario (Zone 5b), last frost is typically mid-May. Start warm-season crops (tomatoes, peppers) indoors 6–8 weeks before transplanting.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-native">
+        <div class="topic-header" onclick="toggleTopic('t-native')">
+          <span class="topic-dot dot-outdoor"></span>Native &amp; Pollinator Plants
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Wild Bergamot</li><li class="leaf">Milkweed</li>
+            <li class="leaf">Goldenrod</li><li class="leaf">Buttonbush</li>
+            <li class="leaf">Joe Pye Weed</li><li class="leaf">Ironweed</li>
+            <li class="leaf">Purple Coneflower</li><li class="leaf">Wild Columbine</li>
+          </ul>
+          <div class="tip-card"><strong>Ecosystem return</strong>Native plants are evolved with local insects and birds — they deliver biodiversity benefits that exotic ornamentals simply can't replicate, and they typically require far less water and maintenance once established.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-trees">
+        <div class="topic-header" onclick="toggleTopic('t-trees')">
+          <span class="topic-dot dot-outdoor"></span>Trees &amp; Canopy
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Sugar Maple</li><li class="leaf">White Oak</li>
+            <li class="leaf">River Birch</li><li class="leaf">Serviceberry</li>
+            <li class="leaf">Magnolia</li><li class="leaf">Crabapple</li>
+            <li class="leaf">Eastern Redbud</li><li class="leaf">Linden</li>
+          </ul>
+          <div class="tip-card"><strong>Canopy is climate</strong>A mature tree provides the equivalent cooling of 10 room-sized air conditioners and can add 10–15% to property value. Right tree, right place — check mature spread before planting near structures.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PLANT CARE ── -->
+  <div class="category cat-care" id="cat-care">
+    <div class="cat-header" onclick="toggleCat('cat-care')">
+      <span class="cat-icon">💧</span>
+      <span class="cat-title">Plant Care Essentials</span>
+      <span class="cat-count">5 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <div class="topic" id="t-watering">
+        <div class="topic-header" onclick="toggleTopic('t-watering')">
+          <span class="topic-dot dot-care"></span>Watering
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Finger Test (2" deep)</li><li class="leaf">Bottom Watering</li>
+            <li class="leaf">Drainage Essential</li><li class="leaf">Seasonal Adjustment</li>
+            <li class="leaf">Rainwater Preferred</li><li class="leaf">Morning Watering</li>
+          </ul>
+          <div class="tip-card"><strong>Overwatering is the #1 killer</strong>Most houseplants die from too much water, not too little. Think of soil moisture like bread dough — you want moist, not wet. If it sticks together and squelches, it's too wet.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-light">
+        <div class="topic-header" onclick="toggleTopic('t-light')">
+          <span class="topic-dot dot-care"></span>Light Requirements
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Direct Sun (6h+)</li><li class="leaf">Bright Indirect</li>
+            <li class="leaf">Filtered / Dappled</li><li class="leaf">Low Light</li>
+            <li class="leaf">Grow Lights (LED)</li><li class="leaf">Seasonal Rotation</li>
+          </ul>
+          <div class="tip-card"><strong>Light is fuel</strong>A south-facing window in winter provides roughly the equivalent of a north-facing window in summer. Rotate plants quarterly and observe — yellowing often means too little light, not nutrient deficiency.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-fert">
+        <div class="topic-header" onclick="toggleTopic('t-fert')">
+          <span class="topic-dot dot-care"></span>Fertilizing
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">N-P-K Ratio</li><li class="leaf">Slow Release Granules</li>
+            <li class="leaf">Liquid Feed (monthly)</li><li class="leaf">No Feed in Dormancy</li>
+            <li class="leaf">Compost Tea</li><li class="leaf">Worm Castings</li>
+          </ul>
+          <div class="tip-card"><strong>N-P-K decoded</strong>Nitrogen (N) = leafy growth. Phosphorus (P) = root and flower development. Potassium (K) = overall vigour and disease resistance. Match the ratio to the plant's growth phase.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-pests">
+        <div class="topic-header" onclick="toggleTopic('t-pests')">
+          <span class="topic-dot dot-care"></span>Pests &amp; Disease
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Spider Mites</li><li class="leaf">Fungus Gnats</li>
+            <li class="leaf">Mealybugs</li><li class="leaf">Aphids</li>
+            <li class="leaf">Root Rot</li><li class="leaf">Powdery Mildew</li>
+            <li class="leaf">Neem Oil (organic)</li><li class="leaf">Insecticidal Soap</li>
+          </ul>
+          <div class="tip-card"><strong>Quarantine new plants</strong>Treat every new plant like a new employee on probation — 2 weeks isolation before introducing to your existing collection. Most pest infestations hitchhike in on new arrivals.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-pruning">
+        <div class="topic-header" onclick="toggleTopic('t-pruning')">
+          <span class="topic-dot dot-care"></span>Pruning &amp; Propagation
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Stem Cuttings</li><li class="leaf">Leaf Cuttings</li>
+            <li class="leaf">Division</li><li class="leaf">Air Layering</li>
+            <li class="leaf">Deadheading</li><li class="leaf">Pinching</li>
+            <li class="leaf">Rooting Hormone</li><li class="leaf">Water Propagation</li>
+          </ul>
+          <div class="tip-card"><strong>Pruning = redirection</strong>Every cut tells the plant where to invest its energy. Removing a spent flower redirects resources to root and new bud development. It's the same logic as editing a business strategy — eliminate the low-value to fund the high-value.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PLANT SELECTION ── -->
+  <div class="category cat-select" id="cat-select">
+    <div class="cat-header" onclick="toggleCat('cat-select')">
+      <span class="cat-icon">🔍</span>
+      <span class="cat-title">Plant Selection Guide</span>
+      <span class="cat-count">8 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <!-- FULL SUN -->
+      <div class="topic" id="t-full-sun">
+        <div class="topic-header" onclick="toggleTopic('t-full-sun')">
+          <span class="topic-dot" style="background:#D4A843"></span>Full Sun — 6+ Hours Direct Light
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <div class="exposure-grid">
+            <div class="exp-block exp-south">
+              <div class="exp-label">☀️ South-Facing</div>
+              <div class="exp-desc">Strongest, longest sun exposure. Heat accumulates along south-facing walls and beds. In Eastern Ontario this is the prime real estate for heat-loving plants.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Lavender</li><li class="leaf">Coneflower</li>
+                <li class="leaf">Black-Eyed Susan</li><li class="leaf">Russian Sage</li>
+                <li class="leaf">Tomatoes</li><li class="leaf">Rosemary</li>
+                <li class="leaf">Ornamental Grasses</li><li class="leaf">Sedum 'Autumn Joy'</li>
+              </ul>
+            </div>
+            <div class="exp-block exp-west">
+              <div class="exp-label">🌅 West-Facing</div>
+              <div class="exp-desc">Afternoon sun — intense and hot, especially in summer. Plants here face the harshest heat of the day. Choose drought-tolerant, heat-resilient species.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Coreopsis</li><li class="leaf">Yarrow</li>
+                <li class="leaf">Gaillardia</li><li class="leaf">Salvia</li>
+                <li class="leaf">Sunflowers</li><li class="leaf">Day Lily</li>
+                <li class="leaf">Agastache</li><li class="leaf">Catmint</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip-card"><strong>Sun is a spectrum, not a switch</strong>Full sun means at least 6 unobstructed hours — but south-facing full sun is more intense than east-facing full sun. Think of it like the difference between a spotlight and a floodlight: same total light, different intensity and heat load.</div>
+        </div>
+      </div>
+
+      <!-- PART SUN / PART SHADE -->
+      <div class="topic" id="t-part-sun">
+        <div class="topic-header" onclick="toggleTopic('t-part-sun')">
+          <span class="topic-dot" style="background:#A8C070"></span>Part Sun / Part Shade — 3–6 Hours
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <div class="exposure-grid">
+            <div class="exp-block exp-east">
+              <div class="exp-label">🌄 East-Facing</div>
+              <div class="exp-desc">Morning sun, afternoon shade. Gentlest of the sun exposures — bright but cool. Ideal for plants that need light without summer heat stress. Excellent for flowering shrubs.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Astilbe</li><li class="leaf">Bleeding Heart</li>
+                <li class="leaf">Coral Bells (Heuchera)</li><li class="leaf">Impatiens</li>
+                <li class="leaf">Ferns</li><li class="leaf">Ligularia</li>
+                <li class="leaf">Japanese Anemone</li><li class="leaf">Hydrangea (bigleaf)</li>
+              </ul>
+            </div>
+            <div class="exp-block exp-west-part">
+              <div class="exp-label">🌤 West-Facing (Part)</div>
+              <div class="exp-desc">Morning shade, afternoon sun. Warmer than east-facing, good for sun-tolerant plants that also appreciate a shaded start. Watch for drought stress in mid-summer.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Coneflower</li><li class="leaf">Rudbeckia</li>
+                <li class="leaf">Phlox</li><li class="leaf">Monarda (Bee Balm)</li>
+                <li class="leaf">Foxglove</li><li class="leaf">Spirea</li>
+                <li class="leaf">Daylily</li><li class="leaf">Veronicastrum</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip-card"><strong>Part sun vs part shade — the distinction matters</strong>"Part sun" means the plant wants as much of those 3–6 hours as possible. "Part shade" means it can tolerate up to that much but actually prefers less. A plant labelled part shade in afternoon west sun will scorch — the label is a range, not a flat specification.</div>
+        </div>
+      </div>
+
+      <!-- FULL SHADE -->
+      <div class="topic" id="t-full-shade">
+        <div class="topic-header" onclick="toggleTopic('t-full-shade')">
+          <span class="topic-dot" style="background:#5A8A6A"></span>Full Shade — Fewer than 3 Hours
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <div class="exposure-grid">
+            <div class="exp-block exp-north">
+              <div class="exp-label">🌑 North-Facing</div>
+              <div class="exp-desc">Least light. No direct sun for most of the year in Northern climates. Often combined with cooler, moister conditions. Limited palette but reliable once established.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Hostas</li><li class="leaf">Lungwort (Pulmonaria)</li>
+                <li class="leaf">Sweet Woodruff</li><li class="leaf">Dead Nettle (Lamium)</li>
+                <li class="leaf">Tiarella (Foamflower)</li><li class="leaf">Wild Ginger</li>
+                <li class="leaf">Lily of the Valley</li><li class="leaf">Solomon's Seal</li>
+              </ul>
+            </div>
+            <div class="exp-block exp-canopy">
+              <div class="exp-label">🌳 Under Canopy / Dense Shade</div>
+              <div class="exp-desc">Beneath mature deciduous or evergreen trees. Root competition, dry shade, and low light combine — among the most challenging garden conditions. Select woodland-adapted natives.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Epimedium</li><li class="leaf">Pachysandra</li>
+                <li class="leaf">Bunchberry</li><li class="leaf">Wild Columbine</li>
+                <li class="leaf">Jack-in-the-Pulpit</li><li class="leaf">Trillium</li>
+                <li class="leaf">Ostrich Fern</li><li class="leaf">Mayapple</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip-card"><strong>Shade is not darkness</strong>"Full shade" still means ambient daylight — open sky overhead even without direct sun rays. True deep shade (enclosed spaces, north side under dense evergreens) is a separate, more challenging condition. Use a phone light sensor app to measure foot-candles before selecting plants for difficult spots.</div>
+        </div>
+      </div>
+
+      <!-- CANOPY SHADE DETAIL -->
+      <div class="topic" id="t-canopy">
+        <div class="topic-header" onclick="toggleTopic('t-canopy')">
+          <span class="topic-dot" style="background:#3D6B52"></span>Mature Vegetation &amp; Canopy Shade
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <div class="canopy-types">
+            <div class="canopy-block">
+              <div class="canopy-label">Deciduous Canopy</div>
+              <div class="canopy-detail">Shade in summer, sun in spring and fall. Plants beneath get a critical spring "light window" before leaf-out — use spring ephemerals that complete their growth cycle early.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Spring window: 6–10 weeks</li>
+                <li class="leaf">Virginia Bluebells</li><li class="leaf">Bloodroot</li>
+                <li class="leaf">Trout Lily</li><li class="leaf">Spring Beauty</li>
+              </ul>
+            </div>
+            <div class="canopy-block">
+              <div class="canopy-label">Evergreen Canopy (Pine / Spruce)</div>
+              <div class="canopy-detail">Year-round shade plus highly acidic, dry soil from needle drop. One of the hardest conditions. Limit plant selection severely and amend soil aggressively.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Soil pH: 4.5–5.5</li>
+                <li class="leaf">Bunchberry</li><li class="leaf">Bearberry</li>
+                <li class="leaf">Creeping Juniper</li><li class="leaf">Acid-tolerant Ferns</li>
+              </ul>
+            </div>
+            <div class="canopy-block">
+              <div class="canopy-label">Root Competition Zone</div>
+              <div class="canopy-detail">Within the drip line of a mature tree, surface roots compete aggressively for water and nutrients. Raised beds on top of root zones (not excavated) are the most effective solution.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Avoid deep-rooted plants</li>
+                <li class="leaf">Use raised bed (4–6" min)</li>
+                <li class="leaf">Epimedium (drought-tolerant)</li>
+                <li class="leaf">Hostas (shallow-rooted)</li>
+              </ul>
+            </div>
+            <div class="canopy-block">
+              <div class="canopy-label">Dappled / Woodland Edge</div>
+              <div class="canopy-detail">Shifting patches of sun through a loose canopy — the most forgiving and plant-rich shade condition. Mimics the natural habitat of the widest range of shade perennials.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Astilbe</li><li class="leaf">Coral Bells</li>
+                <li class="leaf">Ferns (mixed)</li><li class="leaf">Lungwort</li>
+                <li class="leaf">Tiarella</li><li class="leaf">Native Sedges</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tip-card"><strong>Canopy shade is dynamic, not fixed</strong>A newly planted tree imposes progressively more shade each decade. A 20-year-old Sugar Maple that once allowed a sunny perennial bed now creates deep shade. Plan for the tree's mature canopy spread — approximately 2/3 of its mature height — not its current size. This is the garden equivalent of designing for a building's full occupancy load, not day-one use.</div>
+        </div>
+      </div>
+
+      <!-- CARDINAL ORIENTATION QUICK REF -->
+      <div class="topic" id="t-orientation">
+        <div class="topic-header" onclick="toggleTopic('t-orientation')">
+          <span class="topic-dot dot-select"></span>Garden Orientation — Quick Reference
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <table class="orient-table">
+            <thead>
+              <tr>
+                <th>Facing</th>
+                <th>Light Qty</th>
+                <th>Heat Load</th>
+                <th>When</th>
+                <th>Soil Moisture</th>
+                <th>Best For</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>South</strong></td>
+                <td>High</td>
+                <td>High</td>
+                <td>All day</td>
+                <td>Dry</td>
+                <td>Vegetables, lavender, ornamental grasses, drought-tolerant perennials</td>
+              </tr>
+              <tr>
+                <td><strong>East</strong></td>
+                <td>Med–High</td>
+                <td>Low–Med</td>
+                <td>Morning</td>
+                <td>Moderate</td>
+                <td>Hydrangeas, astilbe, flowering shrubs, most cottage perennials</td>
+              </tr>
+              <tr>
+                <td><strong>West</strong></td>
+                <td>Med–High</td>
+                <td>High</td>
+                <td>Afternoon</td>
+                <td>Dry–Mod</td>
+                <td>Coreopsis, salvia, rudbeckia, heat-tolerant natives</td>
+              </tr>
+              <tr>
+                <td><strong>North</strong></td>
+                <td>Low</td>
+                <td>Low</td>
+                <td>Indirect only</td>
+                <td>Moist</td>
+                <td>Hostas, ferns, woodland natives, Solomon's seal</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="tip-card"><strong>Walls and structures shift the equation</strong>A white south-facing wall reflects and amplifies heat — it can add the equivalent of a full hardiness zone. A fence or garage on the west side provides windbreak and shading. Always observe the actual light in your specific space for a full season before committing to a design.</div>
+        </div>
+      </div>
+
+      <!-- CONDITIONS CHECKLIST -->
+      <div class="topic" id="t-conditions">
+        <div class="topic-header" onclick="toggleTopic('t-conditions')">
+          <span class="topic-dot dot-select"></span>Site Conditions Assessment
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Track sun hourly (3 days)</li><li class="leaf">Note seasonal shadow shifts</li>
+            <li class="leaf">Measure soil moisture zones</li><li class="leaf">Identify wind corridors</li>
+            <li class="leaf">Map existing root zones</li><li class="leaf">Hardiness Zone check</li>
+            <li class="leaf">Soil pH test</li><li class="leaf">Frost pocket detection</li>
+            <li class="leaf">Drainage flow after rain</li><li class="leaf">Proximity to pavement (heat)</li>
+          </ul>
+          <div class="tip-card"><strong>Survey before you select</strong>Spend one full growing season observing before planting a permanent bed. Photograph the space in May, July, and September — the shadows, the wet patches, and the dry zones shift dramatically. Rushing to plant is the garden equivalent of skipping the site survey before drafting construction drawings.</div>
+        </div>
+      </div>
+
+      <!-- ZONES -->
+      <div class="topic" id="t-zones">
+        <div class="topic-header" onclick="toggleTopic('t-zones')">
+          <span class="topic-dot dot-select"></span>Hardiness Zones (Canada)
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Zone 5b — Eastern Ontario</li><li class="leaf">Zone 6 — Southern Ontario</li>
+            <li class="leaf">Zone 7 — Niagara</li><li class="leaf">Zone 3–4 — Northern Ontario</li>
+            <li class="leaf">Microclimate effects</li><li class="leaf">Urban heat islands</li>
+          </ul>
+          <div class="tip-card"><strong>Zones are averages, not guarantees</strong>Wendover / Eastern Ontario sits in Zone 5b. A sheltered south-facing wall can bump a location by a full zone. Conversely, a frost pocket in a low-lying area can drop it by one.</div>
+        </div>
+      </div>
+
+      <!-- PURPOSE -->
+      <div class="topic" id="t-purpose">
+        <div class="topic-header" onclick="toggleTopic('t-purpose')">
+          <span class="topic-dot dot-select"></span>Selection by Purpose
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Privacy screening</li><li class="leaf">Erosion control</li>
+            <li class="leaf">Cut flowers</li><li class="leaf">Fragrance garden</li>
+            <li class="leaf">Wildlife habitat</li><li class="leaf">Food production</li>
+            <li class="leaf">Seasonal colour</li><li class="leaf">Year-round structure</li>
+          </ul>
+          <div class="tip-card"><strong>Function first</strong>Define the job before choosing the plant. A privacy hedge and a specimen tree are solved with completely different plants even on the same property.</div>
+        </div>
+      </div>
+
+      <!-- BEGINNER -->
+      <div class="topic" id="t-beginner">
+        <div class="topic-header" onclick="toggleTopic('t-beginner')">
+          <span class="topic-dot dot-select"></span>Beginner-Friendly Picks
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Pothos (indoor)</li><li class="leaf">Snake Plant (indoor)</li>
+            <li class="leaf">Marigolds (outdoor)</li><li class="leaf">Zucchini (veg)</li>
+            <li class="leaf">Hostas (shade)</li><li class="leaf">Coneflower (sun)</li>
+            <li class="leaf">Mint (container herb)</li>
+          </ul>
+          <div class="tip-card"><strong>Build confidence first</strong>Start with forgiving, fast-growing plants. Early successes build pattern recognition — you start to read plant signals intuitively, the same way a new cook learns to judge heat by sight and smell before relying on a thermometer.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── GARDEN PLANNING ── -->
+  <div class="category cat-plan" id="cat-plan">
+    <div class="cat-header" onclick="toggleCat('cat-plan')">
+      <span class="cat-icon">📐</span>
+      <span class="cat-title">Garden Planning</span>
+      <span class="cat-count">5 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <!-- ── LAYOUT & DESIGN ── -->
+      <div class="topic" id="t-layout">
+        <div class="topic-header" onclick="toggleTopic('t-layout')">
+          <span class="topic-dot dot-plan"></span>Layout &amp; Design Principles
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+
+          <div class="plan-intro">Most beginners treat an empty bed like a shopping cart — they fill it with whatever looks good at the garden centre that day. The result is a collection of plants with no relationship to each other. A designed bed is different: it has structure, scale, and intention. Here's how to build one.</div>
+
+          <div class="plan-section-label">The Three-Layer System</div>
+          <div class="layer-stack">
+            <div class="layer-block layer-top">
+              <div class="layer-tag">Layer 1 — Backbone</div>
+              <div class="layer-desc">Tall shrubs or structural perennials at the back (or centre for island beds). These anchor the design and provide year-round form even when nothing is blooming.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Ornamental Grasses</li><li class="leaf">Viburnum</li>
+                <li class="leaf">Russian Sage</li><li class="leaf">Joe Pye Weed</li>
+                <li class="leaf">Spirea</li><li class="leaf">Tall Sedum</li>
+              </ul>
+            </div>
+            <div class="layer-block layer-mid">
+              <div class="layer-tag">Layer 2 — Body</div>
+              <div class="layer-desc">Mid-height perennials and annuals. This is where most of the seasonal colour lives. Mix bloom times so something is always active.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Coneflower</li><li class="leaf">Salvia</li>
+                <li class="leaf">Coreopsis</li><li class="leaf">Phlox</li>
+                <li class="leaf">Astilbe</li><li class="leaf">Day Lily</li>
+              </ul>
+            </div>
+            <div class="layer-block layer-low">
+              <div class="layer-tag">Layer 3 — Edge</div>
+              <div class="layer-desc">Low-growing plants at the front that soften the border between bed and lawn or path. These tie everything together and prevent bare soil from showing.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Catmint</li><li class="leaf">Creeping Thyme</li>
+                <li class="leaf">Alyssum</li><li class="leaf">Coral Bells</li>
+                <li class="leaf">Dianthus</li><li class="leaf">Lobularia</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="plan-section-label">Core Design Rules</div>
+          <div class="rules-grid">
+            <div class="rule-block">
+              <div class="rule-title">Plant in Odd Numbers</div>
+              <div class="rule-desc">Groups of 3, 5, or 7 of the same plant read as intentional. Single plants scattered across a bed look accidental. Repeat the same plant in two or three spots to create visual rhythm — the eye moves through the bed instead of stopping at random points.</div>
+            </div>
+            <div class="rule-block">
+              <div class="rule-title">Create a Focal Point</div>
+              <div class="rule-desc">Every bed needs one plant or element that draws the eye first — a large ornamental grass, a distinctive shrub, a birdbath. Without it, the bed has no hierarchy and nothing registers. Place it off-centre, not dead centre, for a more natural composition.</div>
+            </div>
+            <div class="rule-block">
+              <div class="rule-title">Leave Breathing Room</div>
+              <div class="rule-desc">New plants look sparse. That's correct. Resist the urge to fill every gap immediately. Plants need space to reach their mature spread. A crowded bed in year one becomes an unmanageable tangle by year three. Use mulch to cover bare soil while plants establish.</div>
+            </div>
+            <div class="rule-block">
+              <div class="rule-title">Vary Texture &amp; Form</div>
+              <div class="rule-desc">Combine plants with different leaf shapes and textures: fine (grasses, ferns) beside bold (hostas, ligularia), spiky (iris) beside rounded (hydrangea). Beds planted with similar-looking foliage become a blur. Contrast is what makes individual plants readable.</div>
+            </div>
+          </div>
+
+          <div class="tip-card"><strong>Design the bed on paper first</strong>Sketch your bed to scale before buying a single plant. Mark sun direction, dimensions, and any fixed features. Then place your backbone plants, add the body layer, and fill edges last. This takes 30 minutes and prevents years of fixing mistakes. It's the same logic as drawing floor plans before framing walls — the cost of changing your mind on paper is zero.</div>
+        </div>
+      </div>
+
+      <!-- ── SEASONAL SUCCESSION ── -->
+      <div class="topic" id="t-seasons">
+        <div class="topic-header" onclick="toggleTopic('t-seasons')">
+          <span class="topic-dot dot-plan"></span>Seasonal Succession
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+
+          <div class="plan-intro">The most common beginner mistake: a garden that looks great in June and is bare and dull by August. Seasonal succession is the practice of deliberately choosing plants whose bloom times overlap and hand off to each other across the growing season. The goal is continuous interest from snowmelt to frost.</div>
+
+          <div class="plan-section-label">The Eastern Ontario Growing Calendar</div>
+          <div class="season-timeline">
+            <div class="season-block sblock-spring">
+              <div class="season-header">Early Spring — Apr–May</div>
+              <div class="season-desc">The ground is barely thawed. These plants are engineered for cold and short days. Plant bulbs the previous fall — they can't be added in spring.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Tulips</li><li class="leaf">Daffodils</li>
+                <li class="leaf">Crocus</li><li class="leaf">Snowdrops</li>
+                <li class="leaf">Bleeding Heart</li><li class="leaf">Virginia Bluebells</li>
+              </ul>
+              <div class="season-note">⚠ Plant bulbs in October for April colour. This is the most commonly missed step by beginners.</div>
+            </div>
+            <div class="season-block sblock-lspring">
+              <div class="season-header">Late Spring — May–Jun</div>
+              <div class="season-desc">The main flush of perennial activity begins. Foliage fills in, early bloomers peak. Last frost passes mid-May in Zone 5b — safe to transplant annuals and vegetables.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Allium</li><li class="leaf">Iris</li>
+                <li class="leaf">Peony</li><li class="leaf">Lupine</li>
+                <li class="leaf">Columbine</li><li class="leaf">Catmint</li>
+              </ul>
+              <div class="season-note">✓ Transplant annuals and warm-season vegetables after May 24 weekend.</div>
+            </div>
+            <div class="season-block sblock-summer">
+              <div class="season-header">Summer — Jun–Aug</div>
+              <div class="season-desc">Peak growing season. The widest plant palette. Focus on heat-tolerant mid-season bloomers. Deadhead spent flowers to extend bloom periods.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Coneflower</li><li class="leaf">Salvia</li>
+                <li class="leaf">Day Lily</li><li class="leaf">Monarda</li>
+                <li class="leaf">Coreopsis</li><li class="leaf">Phlox</li>
+                <li class="leaf">Lavender</li><li class="leaf">Rudbeckia</li>
+              </ul>
+              <div class="season-note">✓ Deadhead weekly. Cut back leggy plants by 1/3 in early July to push a second flush.</div>
+            </div>
+            <div class="season-block sblock-fall">
+              <div class="season-header">Fall — Sep–Oct</div>
+              <div class="season-desc">Often ignored by beginners, but fall can be the most dramatic season. Late bloomers and seedheads provide both colour and winter structure for birds.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Asters</li><li class="leaf">Sedum 'Autumn Joy'</li>
+                <li class="leaf">Ornamental Grasses</li><li class="leaf">Goldenrod</li>
+                <li class="leaf">Japanese Anemone</li><li class="leaf">Turtlehead</li>
+              </ul>
+              <div class="season-note">✓ Leave seedheads standing over winter — critical food source for birds and structure in snow.</div>
+            </div>
+            <div class="season-block sblock-winter">
+              <div class="season-header">Winter — Nov–Mar</div>
+              <div class="season-desc">Most beginners cut everything down in fall. Don't. Structural plants — grasses, dried seedheads, evergreen shrubs — provide visual interest and wildlife value through the dormant season.</div>
+              <ul class="leaf-list">
+                <li class="leaf">Ornamental Grasses (standing)</li>
+                <li class="leaf">Rudbeckia seedheads</li>
+                <li class="leaf">Holly (berries)</li><li class="leaf">Boxwood</li>
+                <li class="leaf">Evergreen Groundcovers</li>
+              </ul>
+              <div class="season-note">✓ Cut back in early April, not fall. Winter structure matters more than a tidy garden.</div>
+            </div>
+          </div>
+
+          <div class="tip-card"><strong>Map your bloom calendar before buying plants</strong>List every plant you're considering and write its bloom month beside it. If everything blooms in June and July, you have a two-month garden. A well-planned bed has something happening in every month from April through October. Think of it like a restaurant menu — you want offerings across every course and season, not just one spectacular entrée.</div>
+        </div>
+      </div>
+
+      <!-- ── COMPANION PLANTING ── -->
+      <div class="topic" id="t-companion">
+        <div class="topic-header" onclick="toggleTopic('t-companion')">
+          <span class="topic-dot dot-plan"></span>Companion Planting
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+
+          <div class="plan-intro">Companion planting is strategic placement of plants that actively benefit each other — by deterring pests, attracting pollinators, fixing nitrogen, or providing shade. It's not folklore. Most combinations below have observable, repeatable results in home gardens. It does require knowing what to put where — and what to keep apart.</div>
+
+          <div class="plan-section-label">How It Works — Three Mechanisms</div>
+          <div class="companion-mech">
+            <div class="mech-block">
+              <div class="mech-icon">🛡</div>
+              <div class="mech-title">Pest Deterrence</div>
+              <div class="mech-desc">Certain plants emit compounds that repel insects or mask the scent of vulnerable neighbours. Marigolds produce thiophenes that repel nematodes and aphids. Plant them as a border around your vegetable bed — not randomly — to create an effective barrier.</div>
+            </div>
+            <div class="mech-block">
+              <div class="mech-icon">🌿</div>
+              <div class="mech-title">Nitrogen Fixing</div>
+              <div class="mech-desc">Legumes (beans, peas, clover) host bacteria in their roots that pull nitrogen from the air and deposit it in the soil. Plant them beside heavy feeders like corn, squash, or brassicas. When the legume is cut at season end, the roots decompose and release that nitrogen into the soil.</div>
+            </div>
+            <div class="mech-block">
+              <div class="mech-icon">🐝</div>
+              <div class="mech-title">Pollinator Attraction</div>
+              <div class="mech-desc">Flowering herbs and natives planted near fruiting vegetables dramatically increase pollinator visits and therefore yield. Dill, fennel (kept isolated), borage, and phacelia are among the most effective. Tomatoes with poor pollination produce misshapen fruit — nearby flowers fix this.</div>
+            </div>
+          </div>
+
+          <div class="plan-section-label">Proven Pairings</div>
+          <table class="companion-table">
+            <thead>
+              <tr><th>Plant</th><th>Good Neighbours</th><th>Why It Works</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Tomatoes</strong></td>
+                <td>Basil, Marigolds, Carrots, Borage</td>
+                <td>Basil may repel thrips and aphids; borage attracts pollinators and repels tomato hornworm; marigolds deter whitefly</td>
+              </tr>
+              <tr>
+                <td><strong>Beans</strong></td>
+                <td>Corn, Squash, Carrots, Cucumber</td>
+                <td>Fix nitrogen that feeds corn; squash leaves shade soil reducing moisture loss; classic Three Sisters system</td>
+              </tr>
+              <tr>
+                <td><strong>Brassicas</strong></td>
+                <td>Dill, Sage, Rosemary, Nasturtium</td>
+                <td>Dill and sage repel cabbage moths; nasturtium acts as a trap crop drawing aphids away from brassicas</td>
+              </tr>
+              <tr>
+                <td><strong>Carrots</strong></td>
+                <td>Leeks, Onions, Rosemary, Sage</td>
+                <td>Leeks repel carrot fly; onions and herbs mask carrot scent from pests</td>
+              </tr>
+              <tr>
+                <td><strong>Roses</strong></td>
+                <td>Lavender, Garlic, Chives, Allium</td>
+                <td>Garlic and alliums repel aphids and black spot fungus; lavender attracts beneficial predatory insects</td>
+              </tr>
+              <tr>
+                <td><strong>Squash</strong></td>
+                <td>Corn, Beans, Nasturtium, Borage</td>
+                <td>Large leaves shade soil; borage deters squash vine borers; part of Three Sisters system</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="plan-section-label">Plants to Separate</div>
+          <div class="avoid-grid">
+            <div class="avoid-block">
+              <div class="avoid-pair">Fennel ↔ Most Vegetables</div>
+              <div class="avoid-desc">Fennel is allelopathic — it releases compounds that actively suppress the growth of tomatoes, peppers, beans, and brassicas. Plant it in its own isolated container or bed, away from edibles.</div>
+            </div>
+            <div class="avoid-block">
+              <div class="avoid-pair">Onions ↔ Beans &amp; Peas</div>
+              <div class="avoid-desc">Onion family plants stunt the growth of beans and peas. Keep them on opposite ends of the vegetable bed.</div>
+            </div>
+            <div class="avoid-block">
+              <div class="avoid-pair">Mint ↔ Everything (in ground)</div>
+              <div class="avoid-desc">Mint is aggressively invasive. It will colonize a bed and crowd out neighbours within two seasons. Always grow mint in a container, even if that container is sunk into the ground.</div>
+            </div>
+            <div class="avoid-block">
+              <div class="avoid-pair">Walnut Trees ↔ Vegetables</div>
+              <div class="avoid-desc">Black Walnut produces juglone, a chemical toxic to tomatoes, potatoes, and many other plants. Don't plant edibles within 15–20 metres of a Black Walnut's drip line.</div>
+            </div>
+          </div>
+
+          <div class="tip-card"><strong>Start with one proven pairing, not a full system</strong>Beginners who try to redesign their entire vegetable bed around companion planting at once usually give up. Start with one pair — tomatoes and basil is the easiest. Observe. Add another pairing next season. Companion planting is a skill built through iteration, not a plan executed all at once.</div>
+        </div>
+      </div>
+
+      <!-- ── CONTAINERS (unchanged) ── -->
+      <div class="topic" id="t-containers">
+        <div class="topic-header" onclick="toggleTopic('t-containers')">
+          <span class="topic-dot dot-plan"></span>Container &amp; Raised Bed Gardening
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Thriller/Filler/Spiller</li><li class="leaf">Drainage layers</li>
+            <li class="leaf">Potting mix vs garden soil</li><li class="leaf">Self-watering inserts</li>
+            <li class="leaf">Raised bed depth (12–18")</li><li class="leaf">Square-foot gardening</li>
+          </ul>
+          <div class="tip-card"><strong>Thriller/Filler/Spiller formula</strong>Every great container has a vertical focal point (thriller), mid-height mass (filler), and trailing element (spiller). It's the same compositional logic as foreground, midground, and background in photography.</div>
+        </div>
+      </div>
+
+      <!-- ── TOOLS & SCHEDULING ── -->
+      <div class="topic" id="t-tools">
+        <div class="topic-header" onclick="toggleTopic('t-tools')">
+          <span class="topic-dot dot-plan"></span>Tools &amp; Scheduling
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+
+          <div class="plan-intro">Most gardening mistakes aren't about plants — they're about timing. The right plant, planted two weeks too early or too late, performs poorly. Tools and scheduling convert a reactive approach ("I'll deal with it when I see a problem") into a proactive one where you're always one step ahead of the season.</div>
+
+          <div class="plan-section-label">Essential Tools — What You Actually Need</div>
+          <div class="tools-grid">
+            <div class="tool-block">
+              <div class="tool-name">🪣 Garden Journal</div>
+              <div class="tool-desc">A notebook or phone note where you record what you planted, where, when, and how it performed. Without this, you repeat the same mistakes every year. After three seasons, your journal becomes your most valuable gardening asset.</div>
+              <div class="tool-action">Start now: date, plant name, location, weather conditions at planting.</div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-name">📅 Planting Calendar</div>
+              <div class="tool-desc">A schedule anchored to your last and first frost dates. In Eastern Ontario (Zone 5b): last frost ~May 15–24, first fall frost ~Oct 1–15. Work backward from these dates to set every seed-starting and transplanting deadline.</div>
+              <div class="tool-action">Key dates: Start tomatoes/peppers indoors March 25–April 1. Transplant outdoors May 24+.</div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-name">🌡 Soil Thermometer</div>
+              <div class="tool-desc">Soil temperature is more important than air temperature for germination. Tomatoes need soil at 18°C+ to establish roots. Seeds sown in cold soil rot instead of germinating. A $15 thermometer eliminates guesswork entirely.</div>
+              <div class="tool-action">Check at 5cm depth before direct sowing warm-season crops.</div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-name">⚗️ Soil pH Meter</div>
+              <div class="tool-desc">Most plants perform best at pH 6.0–7.0. Nutrient uptake is governed by pH — even a well-fertilized soil delivers poor results if pH is wrong. Test once at the start of each season, especially in raised beds which drift acidic over time.</div>
+              <div class="tool-action">Test in spring before planting. Adjust with lime (raise) or sulfur (lower).</div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-name">💧 Drip Irrigation Timer</div>
+              <div class="tool-desc">Consistent watering is the single biggest factor in plant performance after sun. A basic timer-controlled drip system costs $50–80 and eliminates the most common cause of failure: irregular watering. It also frees you from the garden during hot spells or travel.</div>
+              <div class="tool-action">Set for early morning delivery — reduces fungal disease and evaporation loss.</div>
+            </div>
+            <div class="tool-block">
+              <div class="tool-name">🧊 Row Covers / Frost Cloth</div>
+              <div class="tool-desc">Lightweight fabric that protects plants from late spring frosts and extends the fall season by 3–4 weeks. In Eastern Ontario, a late May frost after transplanting is common. Having row covers on hand prevents a single cold night from wiping out weeks of seedling work.</div>
+              <div class="tool-action">Keep on hand May 1–June 1 and Sept 15–Oct 15. Set a phone reminder.</div>
+            </div>
+          </div>
+
+          <div class="plan-section-label">The Eastern Ontario Monthly Task Schedule</div>
+          <table class="schedule-table">
+            <thead>
+              <tr><th>Month</th><th>Key Tasks</th><th>What Happens If You Miss It</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>March</strong></td>
+                <td>Start tomatoes, peppers, eggplant indoors under lights. Order seeds.</td>
+                <td>You'll be buying starts at double the cost in May with no variety choice.</td>
+              </tr>
+              <tr>
+                <td><strong>April</strong></td>
+                <td>Start herbs, brassicas (broccoli, kale, cabbage) indoors. Apply pre-emergent mulch to beds.</td>
+                <td>Transplant window shrinks; weeds establish in unmulched beds before you're ready.</td>
+              </tr>
+              <tr>
+                <td><strong>May</strong></td>
+                <td>Harden off seedlings outdoors daily. Plant cold-tolerant crops (lettuce, peas, carrots) directly after May 1. Transplant everything else after May 24.</td>
+                <td>Seedlings transplanted without hardening off suffer transplant shock and set back 2–3 weeks.</td>
+              </tr>
+              <tr>
+                <td><strong>June</strong></td>
+                <td>Mulch all beds to 3". Stake tall perennials before they lean. Set up irrigation if not done. Plant succession lettuce.</td>
+                <td>Unmulched beds lose moisture rapidly; tall plants once fallen rarely recover their form.</td>
+              </tr>
+              <tr>
+                <td><strong>July</strong></td>
+                <td>Deadhead perennials and annuals weekly. Cut back leggy plants by 1/3 for a second flush. Monitor for pests and disease daily in heat.</td>
+                <td>Spent flowers signal plants to stop producing; pests detected late are exponentially harder to control.</td>
+              </tr>
+              <tr>
+                <td><strong>August</strong></td>
+                <td>Plant fall perennials (asters, sedum). Sow a final round of fast crops (lettuce, radish, spinach). Order spring bulbs.</td>
+                <td>Missed fall planting = empty September and October garden; bulbs not ordered sell out by September.</td>
+              </tr>
+              <tr>
+                <td><strong>September</strong></td>
+                <td>Plant spring bulbs. Divide overcrowded perennials. Apply compost to all beds before ground freezes.</td>
+                <td>Overcrowded perennials decline in vigour each year; un-amended soil starts next season depleted.</td>
+              </tr>
+              <tr>
+                <td><strong>October</strong></td>
+                <td>Leave seedheads standing. Cut back diseased material only. Apply 3–4" mulch around perennials after first frost to insulate roots.</td>
+                <td>Cutting everything down removes winter wildlife habitat and next spring's structural interest.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="tip-card"><strong>Schedule is the difference between a garden and a collection of plants</strong>A planting calendar is to a garden what a project schedule is to a construction project. Without it, you're reactive — responding to problems after they've already cost you the season. With it, you're always working ahead of the next deadline. A printed calendar on the fridge, checked monthly, is worth more than any single tool you can buy.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SOIL & ROOTS ── -->
+  <div class="category cat-soil" id="cat-soil">
+    <div class="cat-header" onclick="toggleCat('cat-soil')">
+      <span class="cat-icon">🌱</span>
+      <span class="cat-title">Soil &amp; Root Health</span>
+      <span class="cat-count">4 topics</span>
+      <span class="cat-chevron">▶</span>
+    </div>
+    <div class="cat-body">
+
+      <div class="topic" id="t-soil-types">
+        <div class="topic-header" onclick="toggleTopic('t-soil-types')">
+          <span class="topic-dot dot-soil"></span>Soil Types
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Sandy (fast-draining)</li><li class="leaf">Clay (nutrient-rich, dense)</li>
+            <li class="leaf">Loam (ideal balance)</li><li class="leaf">Silt (fine-textured)</li>
+            <li class="leaf">Peat / Bog</li><li class="leaf">Rocky / Alkaline</li>
+          </ul>
+          <div class="tip-card"><strong>Jar test</strong>Fill a jar ⅔ with your soil and water. Shake and let settle for 24h. Sand falls first, silt next, clay last. The layer depths reveal your soil type — simple, free, actionable.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-amendments">
+        <div class="topic-header" onclick="toggleTopic('t-amendments')">
+          <span class="topic-dot dot-soil"></span>Amendments &amp; Compost
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Compost (universal)</li><li class="leaf">Perlite (drainage)</li>
+            <li class="leaf">Vermiculite (moisture retention)</li><li class="leaf">Biochar</li>
+            <li class="leaf">Lime (raise pH)</li><li class="leaf">Sulfur (lower pH)</li>
+            <li class="leaf">Bone Meal</li><li class="leaf">Blood Meal</li>
+          </ul>
+          <div class="tip-card"><strong>Soil is the bank account</strong>Every harvest, every season, makes a withdrawal from your soil. Amendments are deposits. A healthy garden requires a positive long-term balance — not just chasing the current season's output.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-ph">
+        <div class="topic-header" onclick="toggleTopic('t-ph')">
+          <span class="topic-dot dot-soil"></span>pH &amp; Nutrient Availability
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Ideal range: 6.0–7.0</li><li class="leaf">Acid lovers: blueberry, azalea</li>
+            <li class="leaf">Alkaline tolerant: lavender</li><li class="leaf">pH affects iron uptake</li>
+            <li class="leaf">Test annually</li><li class="leaf">Raised beds drift acidic</li>
+          </ul>
+          <div class="tip-card"><strong>pH is the master key</strong>Even if all nutrients are present in the soil, wrong pH locks them away from the plant's roots — like a vending machine full of food with no working coin slot. Correct pH first, fertilize second.</div>
+        </div>
+      </div>
+
+      <div class="topic" id="t-mycorrhiza">
+        <div class="topic-header" onclick="toggleTopic('t-mycorrhiza')">
+          <span class="topic-dot dot-soil"></span>Mycorrhizae &amp; Soil Biology
+          <span class="topic-chevron">▶</span>
+        </div>
+        <div class="topic-body">
+          <ul class="leaf-list">
+            <li class="leaf">Mycorrhizal fungi</li><li class="leaf">Nitrogen-fixing bacteria</li>
+            <li class="leaf">Earthworm activity</li><li class="leaf">No-till practices</li>
+            <li class="leaf">Cover cropping</li><li class="leaf">Avoid synthetic overload</li>
+          </ul>
+          <div class="tip-card"><strong>The underground internet</strong>Mycorrhizal networks connect root systems across a garden, sharing water and nutrients between plants. Healthy soil biology is a long-term investment in resilience — synthetic fertilizers can short-circuit it the same way antibiotics disrupt gut flora.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end map-container -->
+
+<div class="map-footer" style="text-align:center; padding: 1.5rem 3rem 3rem; color: var(--stone); font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em;">
+  PLANT KNOWLEDGE MAP · INDOOR &amp; OUTDOOR REFERENCE · TAP ANY SECTION TO EXPLORE
+</div>
+
+<script>
+  /* ── Service Worker registration (PWA offline support) ── */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.log('SW registration failed:', err));
+    });
+  }
+
+  /* ── Toggle helpers ── */
+  function toggleCat(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+    // Dismiss the tap prompt on first interaction
+    dismissPrompt();
+  }
+  function toggleTopic(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('open');
+  }
+  function expandAll() {
+    document.querySelectorAll('.category').forEach(el => el.classList.add('open'));
+    document.querySelectorAll('.topic').forEach(el => el.classList.add('open'));
+    dismissPrompt();
+  }
+  function collapseAll() {
+    document.querySelectorAll('.category').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.topic').forEach(el => el.classList.remove('open'));
+  }
+
+  /* ── Tap-prompt dismiss ── */
+  function dismissPrompt() {
+    const p = document.getElementById('tapPrompt');
+    if (p) { p.style.transition = 'opacity 0.4s'; p.style.opacity = '0'; setTimeout(() => p.remove(), 450); }
+  }
+
+  /* ── Mobile table scroll wrapper ── */
+  // On narrow screens, wrap every table in a horizontally scrollable div
+  // so wide tables don't break the layout or get clipped.
+  function wrapTablesForMobile() {
+    if (window.innerWidth > 480) return;
+    document.querySelectorAll('table').forEach(table => {
+      if (table.parentElement.classList.contains('table-scroll')) return; // already wrapped
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-scroll';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+  }
+
+  /* ── iOS safe-area padding for home indicator ── */
+  function applyIOSSafeArea() {
+    const footer = document.querySelector('.map-footer');
+    if (footer && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
+      footer.style.paddingBottom = 'env(safe-area-inset-bottom, 2rem)';
+    }
+  }
+
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    wrapTablesForMobile();
+    applyIOSSafeArea();
+
+    // Auto-dismiss prompt after its animation completes (2 pulses × 2.5s + 0.8s delay = ~6s)
+    const prompt = document.getElementById('tapPrompt');
+    if (prompt && window.innerWidth <= 480) {
+      setTimeout(dismissPrompt, 6500);
+    } else if (prompt && window.innerWidth > 480) {
+      prompt.remove(); // not needed on desktop
+    }
+  });
+
+  window.addEventListener('resize', wrapTablesForMobile);
+</script>
+</body>
+</html>
